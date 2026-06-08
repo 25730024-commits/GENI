@@ -117,7 +117,7 @@
             width: 100%;
             height: 100%;
             object-fit: cover; 
-            transition: opacity 1s ease-in-out;
+            transition: opacity 0.5s ease-in-out;
             opacity: 0;
         }
         
@@ -149,7 +149,6 @@
 
         #scene-description { font-size: 1.05rem; line-height: 1.8; color: var(--text-main); white-space: pre-wrap; text-shadow: 0 2px 4px rgba(0,0,0,0.8); }
 
-        /* 선택지 가로 배치 스타일 변경 */
         #choices-box { 
             width: 100%; 
             display: flex; 
@@ -183,7 +182,6 @@
 
         .choice-btn::before { content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: transparent; transition: background 0.3s; }
 
-        /* 선택지별 확연히 다른 색상 (기본 및 호버) */
         .choice-btn.choice-a {
             background: rgba(153, 27, 27, 0.25);
             border-color: rgba(239, 68, 68, 0.4);
@@ -261,7 +259,6 @@
         .title-screen-mode #game-header h1 { font-size: 3.5rem; text-shadow: 0 10px 30px rgba(255,255,255,0.15); }
         .title-screen-mode #top-split { flex-direction: column; }
 
-        /* 화면이 좁아지면 모바일에서는 세로 배치 전환 */
         @media (max-width: 768px) {
             #top-split { flex-direction: column; }
             .title-screen-mode #game-header h1 { font-size: 2.2rem; }
@@ -289,8 +286,8 @@
         <div id="top-split">
             <div id="top-left-pane">
                 <div id="media-stage-container">
-                    <img id="image-stage" src="" alt="">
-                    <video id="video-stage" autoplay loop muted playsinline></video>
+                    <img id="image-stage" src="" alt="" style="display:none;">
+                    <video id="video-stage" autoplay loop muted playsinline style="display:none;"></video>
                 </div>
             </div>
             <div id="top-right-pane">
@@ -376,10 +373,9 @@
             if(changes.length > 0) { addLog(`동기화 변동: ${changes.join(', ')}`); }
         }
 
-        /* 괄호 안 대사와 지문을 완전 제거한 씬 데이터 */
         const scenes = {
             "TITLE": {
-                title: "", image: "cover.jpg", text: "",
+                title: "", image: "cover.jpg", text: "위치(WISH) 앱에 접속하셨습니다. 당신의 왜곡된 현실이 시작됩니다.",
                 choices: [{ text: "게임 시작", style: "start-btn cinematic-font", action: () => { document.body.classList.remove('title-screen-mode'); addLog("시스템 부팅 완료..."); }, next: "S01" }]
             },
             "S01": {
@@ -514,6 +510,7 @@
         function renderScene(sceneId) {
             const scene = scenes[sceneId];
             if (!scene) return;
+            
             if (sceneId === "TITLE") document.body.classList.add('title-screen-mode');
             else document.body.classList.remove('title-screen-mode');
             
@@ -527,13 +524,22 @@
                     elImageStage.style.display = 'none';
                     elVideoStage.style.display = 'block';
                     
-                    elVideoStage.onloadeddata = () => {
+                    // 비디오 파일이 없어도 강제로 불투명도를 주어 검은 상자로라도 연출되도록 보완
+                    elVideoStage.oncanplay = () => {
                         elVideoStage.style.opacity = '1';
-                        elVideoStage.play().catch(e => console.log("자동재생 방지 정책:", e));
+                        elVideoStage.play().catch(e => console.log("자동재생 제한:", e));
+                    };
+                    
+                    // 미디어 에러 발생 시 강제 출력 세팅
+                    elVideoStage.onerror = () => {
+                        elVideoStage.style.opacity = '1';
                     };
                     
                     elVideoStage.src = scene.video;
                     elVideoStage.load();
+                    // 미디어가 즉시 준비되었을 경우를 대비해 트리거
+                    setTimeout(() => { elVideoStage.style.opacity = '1'; }, 100);
+
                 } else if (scene.image) {
                     elVideoStage.style.display = 'none';
                     elVideoStage.pause();
@@ -542,10 +548,14 @@
                     elImageStage.onload = () => {
                         elImageStage.style.opacity = '1';
                     };
+                    elImageStage.onerror = () => {
+                        elImageStage.style.opacity = '1';
+                    };
                     
                     elImageStage.src = scene.image;
+                    setTimeout(() => { elImageStage.style.opacity = '1'; }, 100);
                 }
-            }, 300);
+            }, 150);
             
             elTitle.innerText = scene.title;
             
